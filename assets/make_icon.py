@@ -1,10 +1,13 @@
 """One-off generator for CoverCraft's "Crop Marks" app icon -> assets/icon.ico.
 
 Draws the same geometry as concept 01 in the icon proof (100x100 viewBox:
-72px rounded square at rx 9, 46px disc, corner registration ticks), supersampled
-4x per target size then downsampled for clean antialiasing. Ticks are dropped
-below 32px, matching the design rationale (favicon quietly falls back to the
-plain CoverCast-family square+disc).
+72px rounded square at rx 9, 46px disc, corner registration ticks) on a solid
+white plate, supersampled 4x per target size then downsampled for clean
+antialiasing. The plate is what makes the icon hold up in Windows 11 dark
+mode - a transparent-background black-stroke glyph nearly disappears against
+a dark taskbar/Start Menu, since there's nothing behind the lines to contrast
+with. Ticks are dropped below 32px, matching the design rationale (favicon
+quietly falls back to the plain CoverCast-family square+disc).
 """
 
 from pathlib import Path
@@ -13,6 +16,8 @@ from PIL import Image, ImageDraw
 SIZES = [16, 24, 32, 48, 64, 128, 256]
 SUPERSAMPLE = 4
 INK = (22, 24, 27, 255)  # matches --ink from the icon proof page
+PLATE_FILL = (255, 255, 255, 255)
+PLATE_BORDER = (211, 213, 209, 255)  # matches --chip-light-line from the icon proof
 
 
 def draw_icon(size_px: int, draw_ticks: bool) -> Image.Image:
@@ -23,6 +28,14 @@ def draw_icon(size_px: int, draw_ticks: bool) -> Image.Image:
 
     def s(v):
         return v * scale
+
+    # Solid plate behind the glyph, so the icon stays legible against a dark
+    # taskbar/Start Menu, not just a light one.
+    plate_border_w = max(1, round(s(1.6)))
+    draw.rounded_rectangle(
+        [s(1), s(1), s(99), s(99)], radius=s(14),
+        fill=PLATE_FILL, outline=PLATE_BORDER, width=plate_border_w,
+    )
 
     # Outer rounded square
     sq_stroke = max(1, round(s(6)))

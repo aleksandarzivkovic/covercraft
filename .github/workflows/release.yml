@@ -1,8 +1,9 @@
 name: Release
 
-# Push a tag like "v1.0.0" to build CoverCraft.exe and publish it as a GitHub
-# Release (with auto-generated release notes from the commits/PRs since the
-# last tag). Can also be run manually from the Actions tab.
+# Push a tag like "v1.0.0" to build CoverCraftSetup.exe (and the raw
+# CoverCraft.exe) and publish them as a GitHub Release, with auto-generated
+# release notes from the commits/PRs since the last tag. Can also be run
+# manually from the Actions tab.
 on:
   push:
     tags:
@@ -30,8 +31,22 @@ jobs:
       - name: Build CoverCraft.exe
         run: pyinstaller --onefile --noconsole --name CoverCraft --icon assets\icon.ico --add-data "assets\icon.ico;assets" gui.py
 
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build CoverCraftSetup.exe installer
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          if ($version -eq "${{ github.ref_name }}" -and $version -notmatch '^\d') {
+            $version = "0.0.0-dev"  # workflow_dispatch on a branch, not a version tag
+          }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\CoverCraft.iss "/DMyAppVersion=$version"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/CoverCraft.exe
+          files: |
+            dist/CoverCraftSetup.exe
+            dist/CoverCraft.exe

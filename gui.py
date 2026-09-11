@@ -41,19 +41,14 @@ class CoverCraftApp:
         self.album_entry.grid(row=0, column=1, sticky="we", padx=(6, 0))
         self.album_entry.focus_set()
 
-        self.dry_run_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            frm, text="Dry run (skip cover photo, saves toner)", variable=self.dry_run_var
-        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
-
         self.generate_btn = ttk.Button(frm, text="Generate PDF", command=self.on_generate)
-        self.generate_btn.grid(row=2, column=0, columnspan=2, pady=(10, 4), sticky="we")
+        self.generate_btn.grid(row=1, column=0, columnspan=2, pady=(10, 4), sticky="we")
 
         self.status_text = tk.Text(frm, width=56, height=12, state="disabled", wrap="word")
-        self.status_text.grid(row=3, column=0, columnspan=2, sticky="nsew")
+        self.status_text.grid(row=2, column=0, columnspan=2, sticky="nsew")
 
         btn_row = ttk.Frame(frm)
-        btn_row.grid(row=4, column=0, columnspan=2, sticky="we", pady=(6, 0))
+        btn_row.grid(row=3, column=0, columnspan=2, sticky="we", pady=(6, 0))
         ttk.Button(btn_row, text="Open output folder", command=self.open_output_folder).pack(side="left")
 
         self.log_queue = queue.Queue()
@@ -93,19 +88,18 @@ class CoverCraftApp:
             messagebox.showerror("CoverCraft", "Enter a numeric Tidal album ID.")
             return
         album_id = int(raw_id)
-        dry_run = self.dry_run_var.get()
 
         self.generate_btn.configure(state="disabled")
         self.status_text.configure(state="normal")
         self.status_text.delete("1.0", "end")
         self.status_text.configure(state="disabled")
 
-        self.worker = threading.Thread(target=self._run, args=(album_id, dry_run), daemon=True)
+        self.worker = threading.Thread(target=self._run, args=(album_id,), daemon=True)
         self.worker.start()
 
-    def _run(self, album_id, dry_run):
+    def _run(self, album_id):
         try:
-            pdf_path = mc.generate_pdf(album_id, dry_run=dry_run, log=self.log)
+            pdf_path = mc.generate_pdf(album_id, log=self.log)
             self.log_queue.put(f"{_SUCCESS_PREFIX}{pdf_path}")
         except tidalapi.exceptions.ObjectNotFound:
             self.log_queue.put("Album not found on Tidal.")
