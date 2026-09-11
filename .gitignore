@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Local Claude Code tool settings, not project source
+.claude/
+
+# Tidal session cache, downloaded art, generated PDFs - personal, not source
+.config/
+output/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
