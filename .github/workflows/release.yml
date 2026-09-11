@@ -28,7 +28,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Build CoverCraft.exe
-        run: pyinstaller --onefile --noconsole --name CoverCraft gui.py
+        run: pyinstaller --onefile --noconsole --name CoverCraft --icon assets\icon.ico --add-data "assets\icon.ico;assets" gui.py
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

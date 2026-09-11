@@ -23,7 +23,7 @@ if (-not (Test-Path $Python)) {
 
 Push-Location $RepoRoot
 try {
-    & $Python --onefile --noconsole --name CoverCraft gui.py
+    & $Python --onefile --noconsole --name CoverCraft --icon assets\icon.ico --add-data "assets\icon.ico;assets" gui.py
 } finally {
     Pop-Location
 }

@@ -27,6 +27,7 @@ import io
 import os
 import re
 import sys
+import webbrowser
 from pathlib import Path
 
 import qrcode
@@ -73,16 +74,24 @@ FONT_BOLD = r"C:\Windows\Fonts\calibrib.ttf"
 # locations instead, since the exe's own folder may be read-only or get
 # wiped/replaced on update.
 FROZEN = getattr(sys, "frozen", False)
+SCRIPT_DIR = Path(__file__).resolve().parent
+# Where bundled read-only assets (e.g. assets/icon.ico) live at runtime: the
+# PyInstaller onefile extraction dir when frozen, this repo otherwise.
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", SCRIPT_DIR))
 
 if FROZEN:
     CONFIG_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "CoverCraft"
     DEFAULT_OUTPUT_DIR = Path.home() / "Documents" / "CoverCraft"
 else:
-    SCRIPT_DIR = Path(__file__).resolve().parent
     CONFIG_DIR = SCRIPT_DIR / ".config"
     DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "output"
 
 DEFAULT_SESSION_FILE = CONFIG_DIR / "tidal_session.json"
+
+
+def resource_path(relative: str) -> Path:
+    """Path to a bundled read-only asset, e.g. resource_path("assets/icon.ico")."""
+    return BUNDLE_DIR / relative
 
 
 # ============================================================
@@ -131,8 +140,18 @@ def login(session_file: Path, log=print) -> tidalapi.Session:
     if session_file.exists() and session.login_session_file(session_file):
         log(f"Loaded saved Tidal session from {session_file}")
     else:
-        log("No usable saved session found, opening browser for Tidal login...")
-        session.login_oauth_simple(fn_print=log)
+        log("No usable saved session found, requesting a Tidal login link...")
+        # tidalapi's login_oauth_simple() only prints the URL and waits - it never
+        # opens a browser itself, which reads as "nothing happens" in a GUI where
+        # that print is easy to miss. Drive the lower-level API instead so we can
+        # open the browser explicitly (and still log the URL as a fallback).
+        link_login, future = session.login_oauth()
+        url = f"https://{link_login.verification_uri_complete}"
+        log(f"Opening browser to log in to Tidal: {url}")
+        if not webbrowser.open(url):
+            log("Could not open a browser automatically - visit that URL manually to log in.")
+        log(f"Waiting for you to finish logging in (link expires in {link_login.expires_in}s)...")
+        future.result()
         session.save_session_to_file(session_file)
         log(f"Session saved to {session_file}")
     return session

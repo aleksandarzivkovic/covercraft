@@ -25,6 +25,10 @@ class CoverCraftApp:
         self.root = root
         root.title("CoverCraft")
         root.resizable(False, False)
+        try:
+            root.iconbitmap(default=str(mc.resource_path("assets/icon.ico")))
+        except tk.TclError:
+            pass  # icon missing (e.g. dev checkout without the asset) - non-fatal
 
         pad = {"padx": 10, "pady": 6}
 
