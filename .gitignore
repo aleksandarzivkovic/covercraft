@@ -9,7 +9,7 @@ __pycache__/
 .config/
 output/
 
-# PyInstaller build artifacts
+# Build artifacts
 build/
 dist/
-*.spec
+installer/.wix/

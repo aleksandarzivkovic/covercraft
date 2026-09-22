@@ -1,9 +1,8 @@
 name: Release
 
-# Push a tag like "v1.0.0" to build CoverCraftSetup.exe (and the raw
-# CoverCraft.exe) and publish them as a GitHub Release, with auto-generated
-# release notes from the commits/PRs since the last tag. Can also be run
-# manually from the Actions tab.
+# Push a tag like "v1.0.0" to build CoverCraftSetup.msi and publish it as a
+# GitHub Release (with auto-generated release notes from the commits/PRs
+# since the last tag). Can also be run manually from the Actions tab.
 on:
   push:
     tags:
@@ -19,33 +18,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Sets $env:pythonLocation, which scripts\build-portable.ps1 uses as
+      # the source for the private Python runtime bundled into the MSI.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Install dependencies
+      - name: Install WiX Toolset
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          dotnet tool install --global wix
+          wix eula accept wix7
 
-      - name: Build CoverCraft.exe
-        run: pyinstaller --onefile --noconsole --name CoverCraft --icon assets\icon.ico --add-data "assets\icon.ico;assets" gui.py
-
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-
-      - name: Build CoverCraftSetup.exe installer
+      - name: Determine version
+        id: version
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace '^v', ''
-          if ($version -eq "${{ github.ref_name }}" -and $version -notmatch '^\d') {
-            $version = "0.0.0-dev"  # workflow_dispatch on a branch, not a version tag
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            $version = "0.0.0"  # workflow_dispatch on a branch, not a version tag
           }
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\CoverCraft.iss "/DMyAppVersion=$version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build CoverCraftSetup.msi
+        shell: pwsh
+        run: scripts\build-msi.ps1 -Version "${{ steps.version.outputs.version }}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: |
-            dist/CoverCraftSetup.exe
+          files: dist/CoverCraftSetup.msi

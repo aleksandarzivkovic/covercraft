@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WiX Toolset v7 source for CoverCraft.
+
+  Builds an MSI - not an .exe - because Windows 11 Smart App Control blocks
+  unsigned/unrecognized exe's outright, with no per-file override. An MSI is
+  installed by msiexec.exe (signed, trusted, part of Windows), which does all
+  the actual file/registry/shortcut work itself; there's no unsigned custom
+  code running anywhere in the install path for Smart App Control to flag.
+  The installed app follows the same principle: it's launched as
+  ...\CoverCraft\python\pythonw.exe ...\CoverCraft\app\gui.py rather than a
+  compiled exe, since pythonw.exe is signed by the Python Software Foundation.
+
+  Expects dist\portable\ to already exist - run scripts\build-portable.ps1
+  first (that's what assembles the private Python runtime + dependencies +
+  app source this file just packages up).
+
+  Local build:
+    wix extension add WixToolset.Util.wixext
+    wix build installer\CoverCraft.wxs -arch x64 -ext WixToolset.Util.wixext -d Version=1.2.3 -o dist\CoverCraftSetup.msi
+
+  (Version defaults to 0.0.0 if -d Version=... isn't passed.)
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <?ifndef Version?>
+  <?define Version = "0.0.0" ?>
+  <?endif?>
+
+  <Package Name="CoverCraft"
+           Manufacturer="Aleksandar Zivkovic"
+           Version="$(Version)"
+           UpgradeCode="960b6a93-dbe2-4366-bb55-cb6e1ec619ab"
+           Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of CoverCraft is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="CoverCraftIcon.ico" SourceFile="..\assets\icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="CoverCraftIcon.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/aleksandarzivkovic/covercraft" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="CoverCraft">
+        <Directory Id="PYTHONFOLDER" Name="python" />
+        <Directory Id="APPFOLDER" Name="app" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppProgramMenuFolder" Name="CoverCraft" />
+    </StandardDirectory>
+
+    <Feature Id="Main">
+      <ComponentGroupRef Id="PythonFiles" />
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="PurgeAppData" />
+    </Feature>
+
+    <!-- Private Python runtime: interpreter, trimmed stdlib, Tcl/Tk, deps -->
+    <ComponentGroup Id="PythonFiles" Directory="PYTHONFOLDER">
+      <Files Include="..\dist\portable\python\**" />
+    </ComponentGroup>
+
+    <!-- App source (gui.py, make_cover.py, assets\icon.ico) -->
+    <ComponentGroup Id="AppFiles" Directory="APPFOLDER">
+      <Files Include="..\dist\portable\app\**" />
+    </ComponentGroup>
+
+    <DirectoryRef Id="AppProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="7963b834-0c89-475c-ab54-c0c00aa58e0d">
+        <Shortcut Id="CoverCraftShortcut"
+                  Name="CoverCraft"
+                  Target="[PYTHONFOLDER]pythonw.exe"
+                  Arguments="&quot;[APPFOLDER]gui.py&quot;"
+                  WorkingDirectory="APPFOLDER"
+                  Icon="CoverCraftIcon.ico" />
+        <RemoveFolder Id="RemoveAppProgramMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\CoverCraft" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Tidal session/cache is app state, not user content - clean it up on
+         uninstall. Generated PDFs in Documents\CoverCraft are left alone
+         since those are the user's actual output, not app state. -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="PurgeAppData" Guid="66bd50bf-9f52-4b3d-84a8-c4860455e6f0">
+        <RegistryValue Root="HKCU" Key="Software\CoverCraft" Name="cleanup" Type="integer" Value="1" KeyPath="yes" />
+        <util:RemoveFolderEx On="uninstall" Property="APPDATACOVERCRAFT" />
+      </Component>
+    </DirectoryRef>
+
+    <SetProperty Id="APPDATACOVERCRAFT" Value="[AppDataFolder]CoverCraft" After="AppSearch" />
+
+  </Package>
+</Wix>

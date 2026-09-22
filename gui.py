@@ -1,8 +1,8 @@
 """CoverCraft desktop GUI - a thin Tkinter front-end over make_cover.generate_pdf().
 
-This is what gets packaged into CoverCraft.exe (see .github/workflows/release.yml)
-and installed to the Start Menu. Running it directly with the venv Python also
-works for development:
+This is what CoverCraftSetup.msi installs and points its Start Menu shortcut
+at (via a private, bundled Python interpreter - see scripts/build-msi.ps1 and
+installer/CoverCraft.wxs). Running it directly with the dev venv also works:
 
     .venv\\Scripts\\python.exe gui.py
 """

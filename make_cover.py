@@ -69,17 +69,18 @@ FONT_REGULAR = r"C:\Windows\Fonts\calibri.ttf"
 FONT_BOLD = r"C:\Windows\Fonts\calibrib.ttf"
 
 # Running as a plain script (dev/terminal use from the repo): keep everything
-# self-contained next to make_cover.py. Running as a packaged/installed exe
-# (see gui.py + the release workflow): use conventional per-user Windows
-# locations instead, since the exe's own folder may be read-only or get
-# wiped/replaced on update.
-FROZEN = getattr(sys, "frozen", False)
+# self-contained next to make_cover.py. Running as the installed app (see
+# gui.py, scripts\build-portable.ps1 and installer\CoverCraft.wxs) - a
+# private Python bundle under Program Files, launched as
+# ...\CoverCraft\python\pythonw.exe ...\CoverCraft\app\gui.py - use
+# conventional per-user Windows locations instead, since Program Files isn't
+# writable by a non-admin process at runtime.
 SCRIPT_DIR = Path(__file__).resolve().parent
-# Where bundled read-only assets (e.g. assets/icon.ico) live at runtime: the
-# PyInstaller onefile extraction dir when frozen, this repo otherwise.
-BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", SCRIPT_DIR))
+# The installed layout always has a "python" folder (the bundled interpreter)
+# as a sibling of this script's "app" folder; a dev checkout never does.
+PACKAGED = (SCRIPT_DIR.parent / "python" / "pythonw.exe").exists()
 
-if FROZEN:
+if PACKAGED:
     CONFIG_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "CoverCraft"
     DEFAULT_OUTPUT_DIR = Path.home() / "Documents" / "CoverCraft"
 else:
@@ -91,7 +92,7 @@ DEFAULT_SESSION_FILE = CONFIG_DIR / "tidal_session.json"
 
 def resource_path(relative: str) -> Path:
     """Path to a bundled read-only asset, e.g. resource_path("assets/icon.ico")."""
-    return BUNDLE_DIR / relative
+    return SCRIPT_DIR / relative
 
 
 # ============================================================
